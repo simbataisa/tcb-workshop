@@ -1,0 +1,14 @@
+pluginManagement {
+  repositories {
+    mavenLocal()
+    maven {
+      url = System.getProperty('nexus.plugins.url', System.getenv('NEXUS_PLUGINS_URL') ?: System.getProperty('nexus.url', System.getenv('NEXUS_URL') ?: 'https://nexus.example.com/repository/gradle-plugins/'))
+      credentials {
+        username = System.getProperty('nexus.username', System.getenv('NEXUS_USERNAME'))
+        password = System.getProperty('nexus.password', System.getenv('NEXUS_PASSWORD'))
+      }
+    }
+    gradlePluginPortal()
+  }
+}
+rootProject.name = 'karate-microservices-testing'
