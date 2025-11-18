@@ -204,6 +204,30 @@ mvn gatling:test \
   -Dthreads=10
 ```
 
+Run with ramp injection for 120s at 5 users/sec:
+
+```bash
+mvn gatling:test \
+  -Dgatling.simulationClass=performance.simulations.KaratePerformanceSimulation \
+  -Dkarate.options="classpath:api" \
+  -Dkarate.env=qa \
+  -Dinjection=ramp \
+  -DusersPerSec=5 \
+  -DdurationSeconds=120
+```
+
+Run with constant injection for 60s at 10 users/sec:
+
+```bash
+mvn gatling:test \
+  -Dgatling.simulationClass=performance.simulations.KaratePerformanceSimulation \
+  -Dkarate.options="classpath:api" \
+  -Dkarate.env=qa \
+  -Dinjection=constant \
+  -DusersPerSec=10 \
+  -DdurationSeconds=60
+```
+
 ## Configuration + shared assets
 
 - `src/test/resources/karate-config.js` centralizes environment detection. Supported knobs include `karate.env`, `mock.use`/`USE_MOCK`, `BASE_URL`, `AUTH_BASE_URL`, `MOCK_SERVER_URL`, and the automatic header configuration via `common/headers/common-headers.js`.
