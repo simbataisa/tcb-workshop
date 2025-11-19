@@ -1,0 +1,162 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16
+    container_name: sharedservices-postgres-local
+    environment:
+      POSTGRES_DB: sharedservices
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - sharedservices-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: sharedservices-kafka-local
+    ports:
+      - '9092:9092'
+      - '9093:9093'
+      - '29092:29092'
+    environment:
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_HEAP_OPTS: "-Xms2048m -Xmx5120m"
+      KAFKA_JVM_PERFORMANCE_OPTS: "-XX:+UseG1GC -XX:MaxGCPauseMillis=50 -XX:InitiatingHeapOccupancyPercent=35 -XX:G1HeapRegionSize=16M"
+    networks:
+      - sharedservices-network
+    healthcheck:
+      test: ['CMD-SHELL', 'kafka-broker-api-versions --bootstrap-server localhost:9092']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.103.0
+    container_name: sharedservices-otel-collector-local
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports:
+      - '4318:4318'
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    networks:
+      - sharedservices-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: sharedservices-jaeger-local
+    ports:
+      - '16686:16686'
+      - '14250:14250'
+      - '14268:14268'
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    networks:
+      - sharedservices-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: sharedservices-kafka-ui-local
+    ports:
+      - '8081:8080'
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
+    networks:
+      - sharedservices-network
+
+  backend:
+    image: shared-services:0.0.1-SNAPSHOT
+    container_name: sharedservices-backend-local
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sharedservices
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MOCK_SERVER_HOST: host.docker.internal
+      OTEL_SERVICE_NAME: sharedservices-backend
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      JAVA_TOOL_OPTIONS: >-
+        -javaagent:/otel/otel-javaagent.jar
+        -Xms3072m
+        -Xmx6144m
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -XX:+ParallelRefProcEnabled
+        -XX:+UnlockExperimentalVMOptions
+        -XX:G1NewSizePercent=20
+        -XX:G1MaxNewSizePercent=40
+        -XX:+UseStringDeduplication
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./otel-javaagent.jar:/otel/otel-javaagent.jar:ro
+    networks:
+      - sharedservices-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    image: shared-services-frontend:0.0.1-SNAPSHOT
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080/api/v1
+    container_name: sharedservices-frontend-local
+    ports:
+      - '5173:80'
+    networks:
+      - sharedservices-network
+
+  karate-mock-server:
+    build:
+      context: ./karate-microservices-testing
+      dockerfile: Dockerfile
+    image: karate-mock-server:latest
+    container_name: sharedservices-karate-mock-local
+    ports:
+      - '8090:8090'
+    environment:
+      MOCK_PORT: 8090
+      MOCK_ENV: qa
+      MOCK_FEATURE_FILE: "src/test/resources/mocks/mock-server.feature"
+      MOCK_BLOCK_MS: 31536000000
+    networks:
+      - sharedservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8090/stripe/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  sharedservices-network:
+    driver: bridge
+
+volumes:
+  pgdata:
