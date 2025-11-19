@@ -10,14 +10,13 @@ object PerfOptionsParser {
   def parse(): Options = {
     val raw = sys.props.getOrElse("karate.options", "").trim
     val tokens = if (raw.isEmpty) Seq.empty else raw.split("\\s+").toSeq
-    val clean = tokens.map(_.replaceAll("^\"|\"$", ""))
 
-    val paths = clean.filterNot(t => t.startsWith("--") || t.startsWith("@")) match {
+    val paths = tokens.filterNot(_.startsWith("--")) match {
       case s if s.nonEmpty => s
-      case _ => Seq("classpath:api")
+      case _ => Seq("classpath:services")
     }
 
-    val tags = clean
+    val tags = tokens
       .sliding(2)
       .collect { case Seq(opt, value) if opt == "--tags" => value }
       .toSeq
