@@ -124,6 +124,16 @@ BASE_URL=https://api.workshop.dennisdao.com \
   --info --rerun-tasks
 ```
 
+Maven example pointing at the same remote environment:
+
+```bash
+BASE_URL=https://api.workshop.dennisdao.com \
+  mvn test \
+  -Dtest='*CustomRunnerTest' \
+  -Dkarate.options="classpath:api" \
+  -Dkarate.env=qa
+```
+
 ### Makefile shortcuts
 
 The Makefile is designed to be invoked from the monorepo root (`shared-services-main`). Example:
@@ -147,6 +157,24 @@ Inside this repository it is easier to call `./gradlew …` directly because the
 | `mvn test -Dtest='*MockRunnerTest' -Dmock.port=8090 -Dmock.block.ms=300000` | Start the mock server and keep it alive for 5 minutes. |
 
 Tip: On zsh, quote or escape globs so the shell doesn’t expand them. Examples: `-Dtest='*CustomRunnerTest'` or `-Dtest=\*CustomRunnerTest`.
+
+### Windows (PowerShell and CMD)
+
+PowerShell:
+
+```powershell
+$env:BASE_URL = "https://api.workshop.dennisdao.com"
+.\gradlew.bat test --tests "*CustomRunnerTest" -Dkarate.options="classpath:api" -Dkarate.env=qa --info --rerun-tasks
+mvn test -Dtest='*CustomRunnerTest' -Dkarate.options="classpath:api" -Dkarate.env=qa
+```
+
+CMD:
+
+```bat
+set BASE_URL=https://api.workshop.dennisdao.com
+gradlew.bat test --tests "*CustomRunnerTest" -Dkarate.options="classpath:api" -Dkarate.env=qa --info --rerun-tasks
+mvn test -Dtest="*CustomRunnerTest" -Dkarate.options="classpath:api" -Dkarate.env=qa
+```
 
 ### Mock server + Docker
 
