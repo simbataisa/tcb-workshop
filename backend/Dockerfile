@@ -7,7 +7,9 @@ COPY gradlew .
 COPY gradle gradle
 COPY build.gradle .
 COPY settings.gradle .
-
+# Make gradlew executable and fix line endings if needed
+RUN chmod +x gradlew && \
+    sed -i 's/\r$//' gradlew || true
 # Download dependencies (cached layer)
 RUN ./gradlew dependencies --no-daemon || true
 
