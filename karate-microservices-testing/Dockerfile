@@ -18,6 +18,9 @@ COPY src src
 
 # Build JAR and compile test classes without running tests
 # assemble: creates JAR, testClasses: compiles test code and processes test resources
+RUN chmod +x gradlew && \
+    sed -i 's/\r$//' gradlew || true
+# Download dependencies (cached layer)
 RUN ./gradlew assemble testClasses --no-daemon
 
 # Stage 2: Runtime image for mock server
@@ -50,8 +53,9 @@ COPY --from=builder /root/.gradle /home/karate/.gradle
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
 # Create directories with proper permissions
 RUN mkdir -p /app/mocks && \
     chown -R karate:karate /app /home/karate

@@ -19,7 +19,7 @@
     <java.version>21</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>${java.version}</maven.compiler.release>
-    <jibTargetArch>arm64</jibTargetArch>
+    <jibTargetArch>amd64</jibTargetArch>
     <jacoco.version>0.8.11</jacoco.version>
     <surefire.version>3.2.5</surefire.version>
     <lombok.version>1.18.30</lombok.version>
@@ -463,20 +463,23 @@
         <version>3.3.0</version>
         <executions>
           <execution>
-            <id>allure-generate</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <workingDirectory>${project.build.directory}/allure-commandline</workingDirectory>
-              <executable>bash</executable>
-              <arguments>
-                <argument>-lc</argument>
-                <argument>./allure-*/bin/allure generate --clean ${project.build.directory}/allure-results -o ${project.build.directory}/allure-report</argument>
-              </arguments>
-            </configuration>
-          </execution>
+  <id>allure-generate</id>
+  <phase>verify</phase>
+  <goals>
+    <goal>exec</goal>
+  </goals>
+  <configuration>
+    <workingDirectory>${project.build.directory}/allure-commandline</workingDirectory>
+    <executable>${project.build.directory}/allure-commandline/allure-2.27.0/bin/allure.bat</executable>
+    <arguments>
+      <argument>generate</argument>
+      <argument>--clean</argument>
+      <argument>${project.build.directory}/allure-results</argument>
+      <argument>-o</argument>
+      <argument>${project.build.directory}/allure-report</argument>
+    </arguments>
+  </configuration>
+</execution>
         </executions>
       </plugin>
     </plugins>
